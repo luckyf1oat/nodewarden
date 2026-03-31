@@ -81,6 +81,7 @@ const COMMON_IMPORT_SOURCE_IDS: ImportSourceId[] = [
   'onepassword_mac_csv',
   'onepassword_win_csv',
   'protonpass_json',
+  'otpauth_text',
   'chrome',
   'edge',
   'brave',
@@ -312,6 +313,7 @@ export default function ImportPage({ onImport, onImportEncryptedRaw, accountKeys
   const [exportAuthDialogOpen, setExportAuthDialogOpen] = useState(false);
   const [exportAuthPassword, setExportAuthPassword] = useState('');
   const [importSummary, setImportSummary] = useState<ImportResultSummary | null>(null);
+  const [otpauthText, setOtpauthText] = useState('');
 
   useDialogLifecycle(!!importSummary, importSummary ? () => setImportSummary(null) : null);
   const commonSourceSet = new Set<ImportSourceId>(COMMON_IMPORT_SOURCE_IDS);
@@ -383,6 +385,33 @@ export default function ImportPage({ onImport, onImportEncryptedRaw, accountKeys
   }
 
   async function handleSubmit() {
+    // Handle otpauth_text specially - it doesn't need a file
+    if (source === 'otpauth_text') {
+      if (!otpauthText.trim()) {
+        onNotify('error', t('txt_please_enter_otpauth_uris'));
+        return;
+      }
+      setIsSubmitting(true);
+      try {
+        const summary = await onImport(
+          parseImportPayloadBySource(source, otpauthText),
+          {
+            folderMode,
+            targetFolderId: folderMode === 'target' ? targetFolderId || null : null,
+          },
+          []
+        );
+        setImportSummary(summary);
+        setOtpauthText('');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : t('txt_import_failed');
+        onNotify('error', message);
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     if (!file) {
       onNotify('error', t('txt_please_select_a_file'));
       return;
@@ -603,18 +632,31 @@ export default function ImportPage({ onImport, onImportEncryptedRaw, accountKeys
             </select>
           </label>
 
-          <label className="field field-span-2">
-            <span>{t('txt_source_file')}</span>
-            <input
-              className="input"
-              type="file"
-              accept={getFileAcceptBySource(source)}
-              onChange={(e) => {
-                const next = (e.currentTarget as HTMLInputElement).files?.[0] || null;
-                setFile(next);
-              }}
-            />
-          </label>
+          {source === 'otpauth_text' ? (
+            <label className="field field-span-2">
+              <span>{t('txt_otpauth_uris')}</span>
+              <textarea
+                className="input"
+                rows={6}
+                placeholder={t('txt_otpauth_uris_placeholder')}
+                value={otpauthText}
+                onInput={(e) => setOtpauthText((e.currentTarget as HTMLTextAreaElement).value)}
+              />
+            </label>
+          ) : (
+            <label className="field field-span-2">
+              <span>{t('txt_source_file')}</span>
+              <input
+                className="input"
+                type="file"
+                accept={getFileAcceptBySource(source)}
+                onChange={(e) => {
+                  const next = (e.currentTarget as HTMLInputElement).files?.[0] || null;
+                  setFile(next);
+                }}
+              />
+            </label>
+          )}
 
           <label className="field field-span-2">
             <span>{t('txt_folder_handling')}</span>
@@ -651,7 +693,11 @@ export default function ImportPage({ onImport, onImportEncryptedRaw, accountKeys
           <button
             type="button"
             className="btn btn-primary"
-            disabled={isSubmitting || (folderMode === 'target' && !targetFolderId)}
+            disabled={
+              isSubmitting ||
+              (folderMode === 'target' && !targetFolderId) ||
+              (source === 'otpauth_text' ? !otpauthText.trim() : !file)
+            }
             onClick={() => void handleSubmit()}
           >
             <FileUp size={15} /> {isSubmitting ? t('txt_loading') : t('txt_import')}

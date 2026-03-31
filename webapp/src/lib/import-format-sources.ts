@@ -48,12 +48,14 @@ export const IMPORT_SOURCES = [
   { id: 'passky_json', label: 'Passky (json)' },
   { id: 'psono_json', label: 'Psono (json)' },
   { id: 'passwordboss_json', label: 'Password Boss (json)' },
+  { id: 'otpauth_text', label: 'OTPAuth URI (text/txt)' },
 ] as const satisfies readonly ImportSourceEntry[];
 
 export type ImportSourceId = (typeof IMPORT_SOURCES)[number]['id'];
 
 export function getFileAcceptBySource(source: ImportSourceId): string {
   if (source === 'bitwarden_zip') return '.zip,application/zip,application/x-zip-compressed';
+  if (source === 'otpauth_text') return '.txt,text/plain';
   if (
     source === 'bitwarden_json' ||
     source === 'nodewarden_json' ||

@@ -45,6 +45,7 @@ import {
   parseMeldiumCsv,
   parseProtonPassJson,
 } from '@/lib/import-formats-password-managers';
+import { parseOtpAuthText } from '@/lib/import-formats-otpauth';
 
 const IMPORT_SOURCE_PARSERS: Record<ImportSourceId, (textRaw: string) => CiphersImportPayload> = {
   bitwarden_json: () => {
@@ -100,6 +101,7 @@ const IMPORT_SOURCE_PARSERS: Record<ImportSourceId, (textRaw: string) => Ciphers
   passky_json: parsePasskyJson,
   psono_json: parsePsonoJson,
   passwordboss_json: parsePasswordBossJson,
+  otpauth_text: parseOtpAuthText,
 };
 
 export function parseImportPayloadBySource(source: ImportSourceId, textRaw: string): CiphersImportPayload {
